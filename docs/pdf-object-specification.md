@@ -2,9 +2,9 @@
 
 ## 1. 目的
 
-`PDF` は、PDF文書の読み込み、ページ参照、結合、保存およびテキスト抽出などを、1つの文書オブジェクトを通じて行うための高水準APIである。
+`PDF` は、PDF文書の読み込み、ページ抽出、結合、保存およびテキスト抽出などを、1つの文書オブジェクトを通じて行うための高水準APIである。
 
-PyPDFの `PdfReader` と `PdfWriter` は実装詳細として利用する。既存PDFはパスで参照し、結合などで生成したPDFは自動削除される一時ファイルとして保持することで、文書全体を常時メモリへ保持しない。
+PyPDFの `PdfReader` と `PdfWriter` は実装詳細として利用する。既存PDFはパスで参照し、結合などで生成したPDFは自動削除される一時ファイルとして保持する。
 
 ```python
 pdf = PDF().read("input.pdf")
@@ -24,7 +24,6 @@ output = merged.save(
 - 生成した文書は一時ファイルへ直接書き出し、`PDF` がその一時ファイルを所有する。
 - `PDF` 自身はファイルハンドルやReaderを常時保持しない。
 - ストリームとReaderが必要な処理では `PDF.open()` を使用する。
-- 一時ファイルの明示的な解放は内部実装が担当し、公開 `PDF` APIに `close()` は設けない。
 - 文書を生成する操作は、明示的に上書きを指定しない限り元の `PDF` を変更しない。
 
 ## 3. 一時ファイル所有者
@@ -82,8 +81,6 @@ _temporary: TemporaryPDFFile | None
 - 値を持つ場合、`PDF` はその一時ファイルを削除する責任を持つ。
 - `_temporary` への強参照により、`PDF` の利用中に一時ファイルがGCで削除されることを防ぐ。
 
-PDF本体を保持する `_data` 属性は設けない。
-
 ## 5. 状態と不変条件
 
 | 状態 | `_path` | `_temporary` | 意味 |
@@ -108,9 +105,9 @@ if self._temporary is not None:
 from contextlib import AbstractContextManager
 from os import PathLike
 from pathlib import Path
-from typing import Self
+from typing import Self, overload
 
-from pypdf import PageObject, PdfReader
+from pypdf import PdfReader
 
 type Pathish = str | PathLike[str]
 
@@ -134,12 +131,16 @@ class PDF:
         overwrite: bool = False,
     ) -> "PDF": ...
 
-    def __getitem__(self, index: int) -> PageObject: ...
+    @overload
+    def __getitem__(self, index: int) -> "PDF": ...
+
+    @overload
+    def __getitem__(self, index: slice) -> "PDF": ...
+
+    def __getitem__(self, index: int | slice) -> "PDF": ...
 
     def __len__(self) -> int: ...
 ```
-
-`PDF` 自身には `close()`、`closed`、`__enter__()`、`__exit__()` を設けない。コンテキスト管理の対象は、`open()` が生成するReaderセッションである。
 
 ## 7. 読み込み
 
@@ -164,8 +165,6 @@ assert same_pdf is pdf
 - パスが存在しない場合は `FileNotFoundError` を送出する。
 - 不正なPDFではPyPDF由来の例外をそのまま送出してよい。
 - 失敗した場合は、呼び出し前の状態と一時ファイルを維持する。
-
-読み込み時点でファイル全体をメモリまたは別の一時ファイルへ複製しない。
 
 ## 8. Readerセッション
 
@@ -197,25 +196,71 @@ with pdf.open() as reader:
 
 テキスト抽出などの高水準メソッドを将来追加する場合、その内部でも `open()` を使用する。
 
-## 9. ページ参照
+## 9. ページ抽出
 
 ### `pdf[index]`
 
-0始まりのページ番号を整数で指定し、対応する `PageObject` を返す。
+0始まりのページ番号を整数で指定し、その1ページだけを含む新しい `PDF` を返す。
 
 ```python
 first_page = pdf[0]
 last_page = pdf[-1]
+
+assert isinstance(first_page, PDF)
+assert len(first_page) == 1
 ```
 
-- Pythonのシーケンスと同様に負数インデックスを許可する。
-- 範囲外では `IndexError`、`int` 以外では `TypeError` を送出する。
-- 初期仕様ではスライスをサポートしない。
-- `open()` の外へ返すため、ページと必要な関連オブジェクトを元Readerから独立させる。
+- 戻り値は元の `PDF` とは異なる新しい `PDF` とする。
+- 戻り値は抽出結果を書き込んだ一時ファイルを所有する。
+- 元の `PDF` は変更しない。
+- Pythonのシーケンスと同様に負数インデックスを許可し、`-1` は最終ページを表す。
+- 範囲外では `IndexError` を送出する。
+- `bool` は整数インデックスとして扱わず、`bool` または整数以外では `TypeError` を送出する。
 
-概念的には `PdfReader(self._path).pages[index]` に相当するが、入力ストリームを閉じた後も通常のページ操作ができる `PageObject` を返さなければならない。実装ではWriter側へページを複製するなどして依存関係を切り離す。
+### `pdf[start:stop]`
 
-独立性をPyPDF上で保証できない場合は、生の `PageObject` を返さず、親PDFを強参照する専用ページ型へ仕様を変更する。
+スライスを指定し、選択範囲のページだけを含む新しい `PDF` を返す。
+
+```python
+first_three_pages = pdf[:2]
+middle_pages = pdf[1:3]
+from_third_page = pdf[2:]
+all_pages = pdf[:]
+```
+
+このAPIでは、`stop` に指定したページを抽出範囲へ含める。通常のPythonスライスが終了位置を含まないのに対し、本APIの終了位置は包含的である。
+
+| 式 | 抽出するインデックス | 人が数えるページ番号 |
+| --- | --- | --- |
+| `pdf[:2]` | `0, 1, 2` | 1〜3ページ目 |
+| `pdf[1:3]` | `1, 2, 3` | 2〜4ページ目 |
+| `pdf[2:]` | `2` から最終インデックス | 3ページ目から最終ページ |
+| `pdf[:]` | 全インデックス | 全ページ |
+
+スライスの処理要件は次の通りとする。
+
+- `start=None` は先頭インデックス `0` として扱う。
+- `stop=None` は最終ページのインデックスとして扱う。
+- `start` と `stop` には負数を指定でき、`-1` は最終ページを表す。
+- 終了位置を含むため、`pdf[:-1]` は全ページを抽出する。
+- 範囲外の `start` と `stop` は、Pythonの通常のスライスと同様に有効範囲へ丸める。
+- `step` は `None` または `1` だけを許可する。それ以外は `ValueError` を送出する。
+- 正規化後に選択ページが1ページもない場合は `ValueError` を送出する。
+- 戻り値は元の `PDF` とは異なる新しい `PDF` とし、元の文書を変更しない。
+
+### 抽出処理
+
+整数とスライスのどちらでも、内部では次の手順で抽出する。
+
+1. `open()` で入力Readerとストリームを開く。
+2. 選択されたページを新しい `PdfWriter` へ順番に追加する。
+3. 新しい `TemporaryPDFFile` へWriterの内容を直接書き込む。
+4. Reader、Writerおよび各ストリームを閉じる。
+5. 一時ファイルを所有する新しい `PDF` を返す。
+
+抽出に失敗した場合は処理途中の一時ファイルを削除し、元の `PDF` を変更せずに例外を再送出する。
+
+返却されるのは独立したPDF文書であるため、元の `PDF` や元ファイルの寿命に依存しない。
 
 ### `len(pdf)`
 
@@ -236,7 +281,6 @@ merged = pdf1.merge(pdf2)
 - ページ順は `self`、`other` の順とする。
 - `other` が `PDF` でない場合は `TypeError` を送出する。
 - 結合結果は新しい `TemporaryPDFFile` へ直接書き込む。
-- 文書全体を中間的な `bytes` または `BytesIO` として保持しない。
 - 結合に失敗した場合は処理途中の一時ファイルを削除し、両方の入力PDFを変更しない。
 - 入力Reader、入力ストリーム、出力Writerおよび出力ストリームは、戻る前に閉じる。
 
@@ -318,7 +362,7 @@ path = pdf.save(
 
 ## 12. 一時ファイルの解放とGC
 
-`PDF` は公開 `close()` を持たない。一時ファイルは次のタイミングで内部的に解放する。
+一時ファイルは次のタイミングで内部的に解放する。
 
 - `read()` の成功によって別の通常ファイルへ切り替えたとき。
 - `merge(..., overwrite=True)` の成功によって別の一時ファイルへ切り替えたとき。
@@ -341,7 +385,7 @@ GCによる削除は最終的な保険であり、実行時刻を保証しない
 ## 14. 初期仕様の対象外
 
 - 暗号化PDFのパスワード管理
-- スライスによる複数ページ抽出
+- `step` を使った間引きまたは逆順のページ抽出
 - ページの代入および削除
 - 遅延した結合処理グラフ
 - 非同期I/O
