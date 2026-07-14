@@ -4,6 +4,7 @@ from .pages import (
     delete_page,
     extract_multiple_pages,
     extract_page,
+    get_page_count,
 )
 from .save import save
 
@@ -14,4 +15,5 @@ __all__ = [
     "extract_multiple_pages",
     "delete_page",
     "delete_multiple_pages",
+    "get_page_count",
 ]

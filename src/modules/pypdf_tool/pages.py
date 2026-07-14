@@ -53,3 +53,7 @@ def delete_page(pdf: Path, index: int) -> bytes:
         return (page_index for page_index in range(page_count) if page_index != deleted_index)
 
     return _write_pages(pdf, select_indices)
+
+def get_page_count(pdf: Path) -> int:
+    with PdfReader(pdf) as reader:
+        return len(reader.pages)
