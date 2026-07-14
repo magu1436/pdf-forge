@@ -41,7 +41,11 @@ class TemporaryPDFFile:
 
     def close(self) -> None:
         """一時ファイルを削除する。解放済みの場合は何もしない。"""
-        self._finalizer()
+        if not self._finalizer.alive:
+            return
+
+        self._delete(self._path)
+        self._finalizer.detach()
 
     @staticmethod
     def _delete(path: Path) -> None:

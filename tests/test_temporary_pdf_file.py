@@ -2,6 +2,7 @@ import gc
 import unittest
 import weakref
 from pathlib import Path
+from unittest.mock import patch
 
 from src.modules.pdf import TemporaryPDFFile
 
@@ -41,6 +42,22 @@ class TemporaryPDFFileTest(unittest.TestCase):
 
         self.assertFalse(temporary_file.closed)
         temporary_file.close()
+        temporary_file.close()
+
+        self.assertTrue(temporary_file.closed)
+        self.assertFalse(path.exists())
+
+    def test_close_can_be_retried_after_deletion_failure(self) -> None:
+        temporary_file = self.create_temporary_file()
+        path = temporary_file.path
+
+        with patch.object(Path, "unlink", side_effect=PermissionError):
+            with self.assertRaises(PermissionError):
+                temporary_file.close()
+
+        self.assertFalse(temporary_file.closed)
+        self.assertTrue(path.exists())
+
         temporary_file.close()
 
         self.assertTrue(temporary_file.closed)
