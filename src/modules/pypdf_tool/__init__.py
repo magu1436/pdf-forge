@@ -1,3 +1,11 @@
+from .errors import (
+    EncryptedPDFError,
+    InvalidPDFError,
+    PDFFileNotFoundError,
+    PDFNotAFileError,
+    PDFValidationError,
+    PyPDFToolException,
+)
 from .merge import merge_multiple_pdf
 from .pages import (
     delete_multiple_pages,
@@ -7,8 +15,15 @@ from .pages import (
     get_page_count,
 )
 from .save import save
+from .validate import validate_pdf
 
 __all__ = [
+    "PyPDFToolException",
+    "PDFValidationError",
+    "PDFFileNotFoundError",
+    "PDFNotAFileError",
+    "InvalidPDFError",
+    "EncryptedPDFError",
     "merge_multiple_pdf",
     "save",
     "extract_page",
@@ -16,4 +31,5 @@ __all__ = [
     "delete_page",
     "delete_multiple_pages",
     "get_page_count",
+    "validate_pdf",
 ]
