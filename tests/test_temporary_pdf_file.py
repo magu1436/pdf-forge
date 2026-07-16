@@ -4,7 +4,7 @@ import weakref
 from pathlib import Path
 from unittest.mock import patch
 
-from src.modules.pdf import TemporaryPDFFile
+from src.modules.temporary_pdf_file import TemporaryPDFFile
 
 
 class TemporaryPDFFileTest(unittest.TestCase):
@@ -16,7 +16,7 @@ class TemporaryPDFFileTest(unittest.TestCase):
             temporary_file.close()
 
     def create_temporary_file(self, data: bytes = b"") -> TemporaryPDFFile:
-        temporary_file = TemporaryPDFFile(data)
+        temporary_file = TemporaryPDFFile.from_bytes(data)
         self.temporary_files.append(temporary_file)
         return temporary_file
 
