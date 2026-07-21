@@ -20,6 +20,14 @@ class TemporaryPDFFileTest(unittest.TestCase):
         self.temporary_files.append(temporary_file)
         return temporary_file
 
+    def test_creates_empty_reopenable_named_pdf_file(self) -> None:
+        temporary_file = TemporaryPDFFile()
+        self.temporary_files.append(temporary_file)
+
+        self.assertEqual(temporary_file.path.suffix, ".pdf")
+        self.assertTrue(temporary_file.path.is_file())
+        self.assertEqual(temporary_file.path.read_bytes(), b"")
+
     def test_creates_reopenable_named_pdf_file(self) -> None:
         temporary_file = self.create_temporary_file(b"pdf contents")
 
