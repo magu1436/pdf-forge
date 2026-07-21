@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from src.modules.pypdf_tool import copy
+from src.modules.pypdf_tool import CopyPDFError, copy
 
 
 class CopyTest(unittest.TestCase):
@@ -30,6 +30,15 @@ class CopyTest(unittest.TestCase):
         copy(self.source, self.output)
 
         self.assertEqual(self.output.read_bytes(), b"new contents")
+
+    def test_preserves_existing_output_when_copy_fails(self) -> None:
+        self.output.write_bytes(b"old contents")
+
+        with self.assertRaises(CopyPDFError):
+            copy(self.directory / "missing.pdf", self.output)
+
+        self.assertEqual(self.output.read_bytes(), b"old contents")
+        self.assertEqual(list(self.directory.iterdir()), [self.output])
 
 
 if __name__ == "__main__":
