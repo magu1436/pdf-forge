@@ -14,7 +14,7 @@ from .pages import (
     extract_page,
     get_page_count,
 )
-from .save import save
+from .copy import copy
 from .validate import validate_pdf
 
 __all__ = [
@@ -25,7 +25,7 @@ __all__ = [
     "InvalidPDFError",
     "EncryptedPDFError",
     "merge_multiple_pdf",
-    "save",
+    "copy",
     "extract_page",
     "extract_multiple_pages",
     "delete_page",
