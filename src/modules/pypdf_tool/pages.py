@@ -27,32 +27,32 @@ def extract_multiple_pages(
     start: int = 0,
     stop: int | None = None,
     step: int = 1,
-) -> bytes:
-    return _write_pages(
+) -> None:
+    _write_pages(
         pdf,
         output,
         lambda page_count: range(*slice(start, stop, step).indices(page_count)),
     )
 
 
-def extract_page(pdf: Path, output: Path, index: int) -> bytes:
-    return _write_pages(pdf, lambda page_count: [_normalize_index(index, page_count)], output)
+def extract_page(pdf: Path, output: Path, index: int) -> None:
+    _write_pages(pdf, output, lambda page_count: [_normalize_index(index, page_count)])
 
 
-def delete_multiple_pages(pdf: Path, output: Path, start: int = 0, stop: int | None = None) -> bytes:
+def delete_multiple_pages(pdf: Path, output: Path, start: int = 0, stop: int | None = None) -> None:
     def select_indices(page_count: int) -> Iterable[int]:
         deleted_indices = range(*slice(start, stop).indices(page_count))
         return (index for index in range(page_count) if index not in deleted_indices)
 
-    return _write_pages(pdf, output, select_indices)
+    _write_pages(pdf, output, select_indices)
 
 
-def delete_page(pdf: Path, output: Path, index: int) -> bytes:
+def delete_page(pdf: Path, output: Path, index: int) -> None:
     def select_indices(page_count: int) -> Iterable[int]:
         deleted_index = _normalize_index(index, page_count)
         return (page_index for page_index in range(page_count) if page_index != deleted_index)
 
-    return _write_pages(pdf, output, select_indices)
+    _write_pages(pdf, output, select_indices)
 
 def get_page_count(pdf: Path) -> int:
     with PdfReader(pdf) as reader:
