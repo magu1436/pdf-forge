@@ -5,6 +5,7 @@ from .errors import (
     PDFNotAFileError,
     PDFValidationError,
     PyPDFToolException,
+    CopyPDFError,
 )
 from .merge import merge_multiple_pdf
 from .pages import (
@@ -24,6 +25,7 @@ __all__ = [
     "PDFNotAFileError",
     "InvalidPDFError",
     "EncryptedPDFError",
+    "CopyPDFError",
     "merge_multiple_pdf",
     "copy",
     "extract_page",

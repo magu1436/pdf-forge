@@ -20,3 +20,6 @@ class InvalidPDFError(PDFValidationError):
 
 class EncryptedPDFError(PDFValidationError):
     """検証対象のPDFが暗号化されている場合に送出する例外。"""
+
+class CopyPDFError(PyPDFToolException):
+    """PDFのコピーに失敗した場合に送出する例外。"""
