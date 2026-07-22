@@ -90,6 +90,9 @@ class PDF:
 
         return self
 
+    def __add__(self, other: PDF) -> PDF:
+        return self.merge(other)
+
     @overload
     def __getitem__(self, index: int) -> PDF: ...
 
