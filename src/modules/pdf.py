@@ -4,7 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import overload
 
-from src.common.type import Pathish
+from .common.type import Pathish
 
 from .pypdf_tool import (
     copy,
@@ -27,8 +27,9 @@ class PDF:
     def __init__(self) -> None: ...
     @overload
     def __init__(self, path: Pathish) -> None: ... 
-    def __init__(self, path_or_none: Pathish | None = None) -> None:
-        self._path: Path | None = path_or_none
+    def __init__(self, path: Pathish | None = None) -> None:
+        path = Path(path) if path is not None else None
+        self._path: Path | None = path
         self._temporary: TemporaryPDFFile | None = None
 
     def save(
