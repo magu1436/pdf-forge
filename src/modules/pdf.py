@@ -23,8 +23,12 @@ class PDFError(Exception):
 class PDF:
     """1つのPDF文書と、その一時ファイルの所有権を表す。"""
 
-    def __init__(self) -> None:
-        self._path: Path | None = None
+    @overload
+    def __init__(self) -> None: ...
+    @overload
+    def __init__(self, path: Pathish) -> None: ... 
+    def __init__(self, path_or_none: Pathish | None = None) -> None:
+        self._path: Path | None = path_or_none
         self._temporary: TemporaryPDFFile | None = None
 
     def save(
@@ -194,6 +198,10 @@ class PDF:
         if self._path is None:
             raise ValueError("PDF does not contain a document")
         return self._path
+
+    @property
+    def isTemporary(self) -> bool:
+        return self._temporary is None
 
     @staticmethod
     def _is_same_path(left: Path, right: Path) -> bool:
